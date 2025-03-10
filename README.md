@@ -16,8 +16,8 @@ Para lograr esto, se utilizan las librerías `WiFi.h` y `WebServer.h`.
 #include <WebServer.h>
 #include <Arduino.h>
 
-const char* ssid = "Xiaomi_11T_Pro";  
-const char* password = "12345678";  
+const char* ssid = "Nautilus";  
+const char* password = "20000Leguas";  
 WebServer server(80);
 
 void handle_root();
