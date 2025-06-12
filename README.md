@@ -1,85 +1,188 @@
-# **Práctica 3**  
+# P3
 
-## Introducción  
-En esta práctica, se explora el uso de Wi-Fi y Bluetooth utilizando el microprocesador ESP32. Se configurará la placa para actuar como un servidor web y se establecerá una comunicación serie con un dispositivo móvil mediante Bluetooth.  
+### Objetivo:
+El objetivo de la practica es comprender el funcionamiento de WIFI Y BT.
 
-## **Parte 1: Creación de una página web**  
-Se implementa un fragmento de código en C++ para configurar el ESP32 como servidor web, permitiéndole generar y alojar una página HTML.  
+### Materiales:
+ESP32
+Serial Bluetooth Terminal
+### Programa:
+  ```cpp
+  /*
+   ESP32 Web Server - STA Mode
+   modified on 25 MAy 2019
+   by Mohammadreza Akbari @ Electropeak
+   https://electropeak.com/learn
+  */
 
-En la función `setup()`, se inicializa la comunicación serial, se conecta la placa a una red Wi-Fi y se activa el servidor web. Mientras tanto, en `loop()`, se gestionan las solicitudes de los clientes que acceden a la página.  
 
-Para lograr esto, se utilizan las librerías `WiFi.h` y `WebServer.h`.  
+    #include <Arduino.h>
+    #include <WiFi.h>
+    #include <WebServer.h>
 
-### **Código C++**  
-```c++
-#include <WiFi.h>
-#include <WebServer.h>
-#include <Arduino.h>
+    void handle_root();
 
-const char* ssid = "Nautilus";  
-const char* password = "20000Leguas";  
-WebServer server(80);
+    // SSID & Password
+    const char* ssid = "Nombre"; // Debe introducir el nombre de su SSID.
+    const char* password = "Contraseña"; // Debe introducir la contraseña.
 
-void handle_root();
+    WebServer server(80); // Objeto de la libreria WebServer, con puerto HTTP 80 por defecto
 
-void setup() {
+    void setup(){
+        Serial.begin(115200);
+        Serial.println("Conectando a la red WiFi...");
+        Serial.println(ssid);
+        WiFi.begin(ssid, password);
+        while (WiFi.status() != WL_CONNECTED) {
+            delay(1000);
+            Serial.print(".");
+        }
+        Serial.println("");
+        Serial.println("Conexión WiFi establecida");
+        Serial.print("Dirección IP: ");
+        Serial.println(WiFi.localIP());
+
+        server.on("/", handle_root);
+        server.begin();
+        Serial.println("HTTP server started");
+        delay(100);
+    }
+
+    void loop() {
+        server.handleClient();
+    }
+
+    // HTML & CSS contents which display on web server
+    // Crecion contenido de la pagina web de prueba, básica: 
+    String HTML = "<!DOCTYPE html>\
+    <html>\
+    <body>\
+    <h1>My Primera Pagina con ESP32 - Station Mode &#128522;</h1>\
+    </body>\
+    </html>";
+    // Handle root url (/)
+
+    void handle_root() {
+        server.send(200, "text/html", HTML);
+    }
+```
+
+### Salida:
+
+```
+    Conectando a la red WiFi...
+    Conexión WiFi establecida
+    Dirección IP: 192.168.1.43
+    My Primera Pagina con ESP32
+```
+
+### Descripción:
+Este código establece un servidor web simple en un ESP32 en modo de estación, que responde con una página HTML básica cuando se accede a la raíz del servidor.
+
+### Código para la página web:
+    
+    #include <WiFi.h>
+    #include <SPIFFS.h>
+    #include <AsyncTCP.h>
+    #include <WebServer.h>
+    #include <Arduino.h>
+
+    const char* ssid = "WebMBR";
+    const char* password = "CL4V3D3F4";
+
+
+    WebServer server;
+
+    String webContent; 
+
+    void handle_root() {
+    server.send(200, "text/html", webContent);
+    }
+
+    String loadFile(String fileName) { 
+    File file = SPIFFS.open(fileName);
+    String content = "";
+
+    if (!file) {
+        Serial.println("Error al abrir el archivo");
+        return content;
+    }
+
+    while (file.available()) {
+        char c = file.read();
+        content += c;
+    }
+
+    file.close();
+    return content;
+    }
+
+    void setup() {
     Serial.begin(115200);
-    Serial.println("Conectando a la red Wi-Fi...");
-    WiFi.begin(ssid, password);
 
+    if (!SPIFFS.begin(true)) {
+        Serial.println("Error al montar SPIFFS");
+        return;
+    }
+
+    webContent = loadFile("/PaginaWeb.html");
+    delay(1000);
+
+    Serial.println("Conectando a la red WiFi...");
+    Serial.println(ssid);
+    WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) {
         delay(1000);
         Serial.print(".");
     }
-
-    Serial.println("\nConexión establecida");
+    Serial.println("");
+    Serial.println("Conexión WiFi establecida");
     Serial.print("Dirección IP: ");
     Serial.println(WiFi.localIP());
 
-    server.on("/", handle_root);
     server.begin();
     Serial.println("Servidor HTTP iniciado");
-}
+    
+    server.on("/", handle_root);
+    }
 
-void loop() {
+    void loop() {
     server.handleClient();
-}
+    }
+
+### Página web sencilla
+```
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página Web</title>
+</head>
+<body>
+    <h1>Bienvenido a mi Página Web</h1>
+    <p>Aquí tienes un número aleatorio: <span id="randomNumber"></span></p>
+
+    <script>
+        // Generar un número aleatorio y mostrarlo en la página
+        document.getElementById("randomNumber").textContent = Math.floor(Math.random() * 100);
+    </script>
+</body>
+</html>
+```
+### Salida:
+```
+    Conectando a la red WiFi...
+    Conexión WiFi establecida
+    Dirección IP: 192.168.1.43
+    Bienvenido a mi Página Web
+    Aquí tienes un número aleatorio 6
 ```
 
-### **Código HTML**  
-```html
-String HTML = "<!DOCTYPE html>\
-<html>\
-<body>\
-<h1>Página web creada - Práctica 3 (Wi-Fi) &#128522;</h1>\
-</body>\
-</html>";
+# Bluetooth
 
-void handle_root() {
-    server.send(200, "text/html", HTML);
-}
-```
-
-### **Funcionamiento y salida esperada**  
-Este código convierte la placa ESP32 en un servidor web capaz de alojar una página HTML. Al acceder a la dirección IP del ESP32 desde un navegador, se mostrará la página creada.  
-
-En la consola serie, se visualizarán mensajes indicando la conexión exitosa y la dirección IP asignada. Ejemplo:  
-
-```
-Conectando a la red Wi-Fi...
-...........................
-Conexión establecida
-Dirección IP: 192.168.1.100
-Servidor HTTP iniciado
-```
-
----
-
-## **Parte 2: Comunicación Bluetooth con un móvil**  
-En esta sección, se configura el ESP32 para comunicarse con un dispositivo móvil mediante Bluetooth. La placa se identificará como "ESP32test" y permitirá el intercambio bidireccional de datos.  
-
-### **Código C++**  
-```c++
+### Código:
+```cpp
 #include <Arduino.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
@@ -186,5 +289,6 @@ void loop() {
 }
 ```
 
-### **Funcionamiento y salida esperada**  
-Este código permite la comunicación bidireccional entre la placa ESP32 y un dispositivo móvil mediante Bluetooth. Desde el monitor serie, se puede observar el estado de conexión y los datos transmitidos.  
+
+### Descripción:
+Este programa crea una conexion bluetooth en la placa la cual uno se puede connectar. Una vez connectado sale la salida puesta anteriormente, si sale un error saldrá en la salida la frase "Bluetooth is not enabled! Please run make menuconfig to and enable it".
